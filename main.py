@@ -127,6 +127,10 @@ async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
     resp = MessagingResponse()
     return str(resp)
 
+@app.get("/")
+async def root():
+    return {"message": "Kumul Bot is running!"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
