@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+langchain
+langchain-openai
+langchain-community
+tavily-python
+twilio
+psycopg2-binary
+sqlalchemy
