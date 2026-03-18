@@ -57,7 +57,7 @@ agent_executor = AgentExecutor(
 def get_session_history(session_id):
     return SQLChatMessageHistory(
         session_id=session_id,
-        connection_string=os.getenv("DATABASE_URL")
+        connection=os.getenv("DATABASE_URL")
     )
 
 agent_with_memory = RunnableWithMessageHistory(

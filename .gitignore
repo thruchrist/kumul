@@ -1,4 +1,21 @@
+# Virtual Environment
 venv/
-__pycache__/
+env/
+.venv/
+
+# Environment Variables (KEEP THESE SECRET)
 .env
+
+# Python Cache
+__pycache__/
 *.pyc
+*.pyo
+
+# Database files (if using local sqlite)
+*.db
+*.sqlite
+
+# IDE settings
+.vscode/
+.idea/
+obsolete/
