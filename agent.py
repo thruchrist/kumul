@@ -136,10 +136,11 @@ def get_agent_response(user_input, phone_number, user_profile):
         return (
             "🙏 *High Demand Alert*\n\n"
             "We are currently experiencing high traffic, and our AI resources are temporarily limited.\n\n"
+            "*Please try again later.*\n\n"
             "To keep *KUMUL* running smoothly and helping Papua New Guineans find jobs, we need your support!\n\n"
             "☕ *Support us here:*\n"
             "https://ko-fi.com/kumulbot/goal?g=4\n\n" 
-            "Please try again later.\n\n"
+            
             "====================================\n"
             "*_KUMUL DEVELOPMENT_*\n\n"
             "_To join, collaborate or support KUMUL AI development team, reach us at WhatsApp 71087533 or E. support@datacomlab.com_\n\n"
