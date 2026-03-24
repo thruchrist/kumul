@@ -32,30 +32,49 @@ def send_whatsapp_message(to_number, body):
         resp = requests.post(META_API_URL, headers=headers, json=data)
         if resp.status_code != 200:
             print(f"❌ Error sending message: {resp.text}")
+        else:
+            print(f"✅ Message sent successfully to {to_number}")
     except Exception as e:
         print(f"❌ Request failed: {e}")
 
 # --- Main Logic ---
 def process_message_logic(phone_number, user_message, client_ip):
-    # 1. Get User Profile (Context)
-    # Since you are testing locally, this will use your local DB
-    user = get_user_profile(phone_number)
+    # LOG: Start of process
+    print(f"\n{'='*10} NEW INTERACTION {'='*10}")
+    print(f"📞 Phone: {phone_number}")
+    print(f"💬 Message: {user_message}")
     
-    # 2. Get AI Response
-    # This runs your new agent code with the new tools
-    ai_response = get_agent_response(user_message, phone_number, user)
-    
-    # 3. PERMANENT LOGGING
-    # This saves to your local database
-    log_interaction(
-        phone_number=phone_number,
-        ip_address=client_ip,
-        user_message=user_message,
-        bot_response=ai_response
-    )
+    try:
+        # 1. Get User Profile (Context)
+        user = get_user_profile(phone_number)
+        if user:
+            print(f"👤 Profile Found: {user.profession} in {user.location}")
+        else:
+            print(f"👤 Profile: New User (No profile found)")
 
-    # 4. Send Reply
-    send_whatsapp_message(phone_number, ai_response)
+        # 2. Get AI Response
+        # Note: Agent verbose logs will appear inside this function call
+        print("🧠 Thinking...")
+        ai_response = get_agent_response(user_message, phone_number, user)
+        print(f"🤖 Response: {ai_response}")
+        
+        # 3. PERMANENT LOGGING
+        log_interaction(
+            phone_number=phone_number,
+            ip_address=client_ip,
+            user_message=user_message,
+            bot_response=ai_response
+        )
+        print("💾 Data saved to database.")
+
+        # 4. Send Reply
+        send_whatsapp_message(phone_number, ai_response)
+        print(f"{'='*10} END INTERACTION {'='*10}\n")
+
+    except Exception as e:
+        print(f"❌ CRITICAL ERROR in process_message_logic: {e}")
+        # Send a fallback message so the user isn't left hanging
+        send_whatsapp_message(phone_number, "⚠️ Sorry, a server error occurred. Please try again later.")
 
 # --- Webhook Endpoints ---
 
@@ -89,6 +108,7 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
                 
                 if message["type"] == "text":
                     user_message = message["text"]["body"]
+                    # Add to background tasks
                     background_tasks.add_task(
                         process_message_logic, 
                         phone_number, 
@@ -101,7 +121,7 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
                     pass
 
         except Exception as e:
-            print(f"Error parsing webhook: {e}")
+            print(f"❌ Error parsing webhook payload: {e}")
 
     return Response(status_code=200)
 
