@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from tavily import TavilyClient
 from langchain_core.tools import tool
 from dotenv import load_dotenv
@@ -11,50 +11,55 @@ tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 @tool
 def search_png_jobs(role: str, location: str = "Papua New Guinea") -> str:
     """
-    Searches for job vacancies in Papua New Guinea.
-    Use this when the user asks to find jobs.
-    Args:
-        role: The job title (e.g., 'driver', 'accountant').
-        location: The location (e.g., 'Lae', 'Port Moresby').
+    Searches specifically for job vacancies in Papua New Guinea using advanced filtering.
+    Use this ONLY when the user explicitly asks to find jobs.
     """
-    current_year = datetime.now().year
-    # Optimized query for PNG context
-    query = f"job vacancy {role} in {location} PNG {current_year} site:pg OR site:linkedin.com/jobs"
+    # Calculate date for "recent" jobs (last 30 days)
+    date_threshold = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    
+    # Construct high-precision query
+    # We prioritize LinkedIn and local PNG job boards
+    query = (
+        f"{role} job vacancy {location} PNG "
+        f"site:linkedin.com/jobs OR site:pngjobseek.com OR site:pg.Indeed.com"
+    )
     
     try:
         response = tavily.search(
             query=query,
             search_depth="advanced",
-            max_results=5,
+            max_results=8,
             include_raw_content=False,
+            days=30 # Look back 30 days
         )
         
         if not response.get('results'):
-            return f"No recent jobs found for {role} in {location}."
+            return "ZERO_RESULTS: No recent jobs found."
 
-        jobs_list = []
+        formatted_results = []
         for item in response['results']:
             title = item.get('title', 'Job Opening')
             url = item.get('url', '')
-            jobs_list.append(f"👉 *{title}*\n🔗 {url}")
+            # Filter out non-job links (common in web search noise)
+            if "job" in title.lower() or "vacancy" in title.lower() or "career" in title.lower():
+                formatted_results.append(f"👉 *{title}*\n🔗 {url}")
         
-        return "\n\n".join(jobs_list)
+        if not formatted_results:
+            return "ZERO_RESULTS: Found pages but no direct job listings."
+
+        return "\n\n".join(formatted_results)
 
     except Exception as e:
-        return f"Search failed: {str(e)}"
+        return f"SEARCH_ERROR: {str(e)}"
 
 @tool
-def save_user_data(phone_number: str, profession: str = None, location: str = None) -> str:
+def save_user_profile(phone_number: str, profession: str = None, location: str = None) -> str:
     """
-    Saves or updates the user's professional profile.
+    Saves the user's professional details to permanent memory.
     Call this immediately when the user mentions their job or location.
     """
     try:
-        update_user_profile(
-            phone_number=phone_number, 
-            profession=profession, 
-            location=location
-        )
-        return "Profile updated."
+        update_user_profile(phone_number=phone_number, profession=profession, location=location)
+        return "SUCCESS: Profile saved."
     except Exception as e:
-        return f"Error updating profile: {str(e)}"
+        return f"ERROR: Failed to save profile: {str(e)}"

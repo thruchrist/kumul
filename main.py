@@ -3,7 +3,7 @@ import requests
 from fastapi import FastAPI, Request, BackgroundTasks, Response
 from dotenv import load_dotenv
 from agent import get_agent_response
-from database import get_user_profile, log_interaction
+from database import get_user_profile, log_interaction, update_user_profile
 
 load_dotenv()
 
@@ -38,36 +38,63 @@ def send_whatsapp_message(to_number, body):
         print(f"❌ Request failed: {e}")
 
 # --- Main Logic ---
-def process_message_logic(phone_number, user_message, client_ip):
+def process_message_logic(phone_number, user_message, client_ip, lat=None, lon=None):
+    """
+    Core logic to handle incoming messages.
+    Accepts optional lat/lon for location pins.
+    """
     # LOG: Start of process
     print(f"\n{'='*10} NEW INTERACTION {'='*10}")
     print(f"📞 Phone: {phone_number}")
     print(f"💬 Message: {user_message}")
+    if lat and lon:
+        print(f"📍 Location Pin: {lat}, {lon}")
     
+    # Initialize variables for logging
+    ai_response = "⚠️ Sorry, I encountered an error."
+    detected_profession = None
+    detected_location_text = None
+
     try:
-        # 1. Get User Profile (Context)
+        # 1. Handle Location Update (if provided via pin)
+        if lat and lon:
+            update_user_profile(phone_number, lat=lat, lon=lon)
+            print("💾 Location coordinates saved to user profile.")
+
+        # 2. Get User Profile (Context)
         user = get_user_profile(phone_number)
         if user:
             print(f"👤 Profile Found: {user.profession} in {user.location}")
         else:
             print(f"👤 Profile: New User (No profile found)")
 
-        # 2. Get AI Response
-        # Note: Agent verbose logs will appear inside this function call
+        # 3. Get AI Response
+        # The agent handles extraction of profession/location automatically
         print("🧠 Thinking...")
         ai_response = get_agent_response(user_message, phone_number, user)
         print(f"🤖 Response: {ai_response}")
         
-        # 3. PERMANENT LOGGING
+        # 4. POST-PROCESSING: Capture updated profile data for logging
+        # We fetch the profile again to see if the Agent extracted new info (Requirement 5)
+        updated_user = get_user_profile(phone_number)
+        if updated_user:
+            detected_profession = updated_user.profession
+            detected_location_text = updated_user.location
+
+        # 5. PERMANENT LOGGING (Requirement 5)
+        # We log the message, response, AND the extracted data.
+        # Note: We do NOT log lat/lon in InteractionLog to match your existing DB schema.
         log_interaction(
             phone_number=phone_number,
             ip_address=client_ip,
             user_message=user_message,
-            bot_response=ai_response
+            bot_response=ai_response,
+            detected_profession=detected_profession,
+            detected_location=detected_location_text
         )
-        print("💾 Data saved to database.")
+        print("💾 Interaction logged to permanent database.")
 
-        # 4. Send Reply
+        # 6. Send Reply
         send_whatsapp_message(phone_number, ai_response)
         print(f"{'='*10} END INTERACTION {'='*10}\n")
 
@@ -93,7 +120,7 @@ async def verify_webhook(request: Request):
 async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
     payload = await request.json()
     
-    # Capture Client IP
+    # Capture Client IP (Requirement 5)
     client_host = request.client.host if request.client else "Unknown"
 
     if payload.get("object") == "whatsapp_business_account":
@@ -106,19 +133,35 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
                 message = value["messages"][0]
                 phone_number = message["from"]
                 
+                # --- Handle Text Messages ---
                 if message["type"] == "text":
                     user_message = message["text"]["body"]
-                    # Add to background tasks
                     background_tasks.add_task(
                         process_message_logic, 
                         phone_number, 
                         user_message, 
-                        client_host
+                        client_host,
+                        None, # lat
+                        None  # lon
                     )
                 
+                # --- Handle Location Pins (Requirement 1 & 5) ---
                 elif message["type"] == "location":
-                    # Handle location sharing if needed in future
-                    pass
+                    loc = message["location"]
+                    lat = loc.get("latitude")
+                    lon = loc.get("longitude")
+                    
+                    # Create a readable message for the logs/agent
+                    user_message = "📍 User shared a location pin."
+                    
+                    background_tasks.add_task(
+                        process_message_logic, 
+                        phone_number, 
+                        user_message, 
+                        client_host,
+                        lat,
+                        lon
+                    )
 
         except Exception as e:
             print(f"❌ Error parsing webhook payload: {e}")
