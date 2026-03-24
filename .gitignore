@@ -2,20 +2,17 @@
 venv/
 env/
 .venv/
-
-# Environment Variables (KEEP THESE SECRET)
 .env
-
-# Python Cache
 __pycache__/
 *.pyc
 *.pyo
-
-# Database files (if using local sqlite)
 *.db
 *.sqlite
-
-# IDE settings
 .vscode/
 .idea/
 obsolete/
+*.py[cod]
+*.so
+.env_twilio.txt
+.vscode/
+main_twilio.py
