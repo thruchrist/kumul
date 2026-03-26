@@ -166,7 +166,7 @@ load_dotenv()
 
 # --- 1. The Brain (Llama 4 Maverick 17B FP8) ---
 llm = ChatOpenAI(
-    model="meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8", # Switched to Maverick FP8
+    model="llama-3.3-70b-versatile", # Switched to Maverick FP8
     temperature=0.1, # Low temp for logic, high temp for creativity. We want logic here.
     base_url=os.getenv("OPENAI_API_BASE"),
     openai_api_key=os.getenv("OPENAI_API_KEY"),
