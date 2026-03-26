@@ -13,7 +13,7 @@ class ProfileExtraction(BaseModel):
     location: str = Field(description="The city or place name mentioned", default=None)
 
 llm = ChatOpenAI(
-    model="llama-3.3-70b-versatile",
+    model="meta-llama/llama-4-maverick-17b-128e-instruct", # llama-3.3-70b-versatile
     temperature=0,
     base_url=os.getenv("OPENAI_API_BASE"),
     openai_api_key=os.getenv("OPENAI_API_KEY")
