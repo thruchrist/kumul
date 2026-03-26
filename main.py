@@ -9,9 +9,20 @@ load_dotenv()
 
 # --- Configuration ---
 BOT_NAME = os.getenv("BOT_NAME", "KUMUL")
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
+
+# --- SMART LOGIC: SWITCH CREDENTIALS ---
+ENV = os.getenv("ENVIRONMENT", "prod").lower()
+
+if ENV == "dev":
+    print("🛠️ RUNNING IN DEVELOPMENT MODE (Test App)")
+    PHONE_NUMBER_ID = os.getenv("TEST_PHONE_NUMBER_ID")
+    WHATSAPP_TOKEN = os.getenv("TEST_WHATSAPP_TOKEN")
+else:
+    print("🚀 RUNNING IN PRODUCTION MODE")
+    PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+    WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+
 META_API_URL = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
 
 app = FastAPI()
@@ -69,21 +80,17 @@ def process_message_logic(phone_number, user_message, client_ip, lat=None, lon=N
             print(f"👤 Profile: New User (No profile found)")
 
         # 3. Get AI Response
-        # The agent handles extraction of profession/location automatically
         print("🧠 Thinking...")
         ai_response = get_agent_response(user_message, phone_number, user)
         print(f"🤖 Response: {ai_response}")
         
-        # 4. POST-PROCESSING: Capture updated profile data for logging
-        # We fetch the profile again to see if the Agent extracted new info (Requirement 5)
+        # 4. POST-PROCESSING
         updated_user = get_user_profile(phone_number)
         if updated_user:
             detected_profession = updated_user.profession
             detected_location_text = updated_user.location
 
-        # 5. PERMANENT LOGGING (Requirement 5)
-        # We log the message, response, AND the extracted data.
-        # Note: We do NOT log lat/lon in InteractionLog to match your existing DB schema.
+        # 5. PERMANENT LOGGING
         log_interaction(
             phone_number=phone_number,
             ip_address=client_ip,
@@ -100,7 +107,6 @@ def process_message_logic(phone_number, user_message, client_ip, lat=None, lon=N
 
     except Exception as e:
         print(f"❌ CRITICAL ERROR in process_message_logic: {e}")
-        # Send a fallback message so the user isn't left hanging
         send_whatsapp_message(phone_number, "⚠️ Sorry, a server error occurred. Please try again later.")
 
 # --- Webhook Endpoints ---
@@ -120,7 +126,6 @@ async def verify_webhook(request: Request):
 async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
     payload = await request.json()
     
-    # Capture Client IP (Requirement 5)
     client_host = request.client.host if request.client else "Unknown"
 
     if payload.get("object") == "whatsapp_business_account":
@@ -129,6 +134,16 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
             changes = entry["changes"][0]
             value = changes["value"]
             
+            # --- FIX: STRICT NUMBER CHECK ---
+            # 1. Get the Phone Number ID the message was sent TO (from Meta payload)
+            incoming_id = value.get("metadata", {}).get("phone_number_id")
+            
+            # 2. Compare with OUR configured ID
+            if incoming_id != PHONE_NUMBER_ID:
+                print(f"⏩ Ignoring message for different Number ID: {incoming_id}")
+                return Response(status_code=200)
+            # --------------------------------
+
             if "messages" in value:
                 message = value["messages"][0]
                 phone_number = message["from"]
@@ -141,17 +156,15 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
                         phone_number, 
                         user_message, 
                         client_host,
-                        None, # lat
-                        None  # lon
+                        None, 
+                        None
                     )
                 
-                # --- Handle Location Pins (Requirement 1 & 5) ---
+                # --- Handle Location Pins ---
                 elif message["type"] == "location":
                     loc = message["location"]
                     lat = loc.get("latitude")
                     lon = loc.get("longitude")
-                    
-                    # Create a readable message for the logs/agent
                     user_message = "📍 User shared a location pin."
                     
                     background_tasks.add_task(
@@ -170,4 +183,4 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
 
 @app.get("/")
 async def root():
-    return {"status": "online", "model": "Llama-3.3-70B"}
+    return {"status": "online", "mode": ENV, "model": "Llama-3.3-70B"}
