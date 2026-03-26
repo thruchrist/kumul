@@ -133,13 +133,14 @@ def get_agent_response(user_input, phone_number, user_profile):
         
         # For ANY error (Rate limit, API issue, etc), we return the polite donation message.
         # This ensures the user always sees a professional response if the bot's brain fails.
+        #            "To keep *KUMUL* running smoothly and helping Papua New Guineans find jobs, we need your support!\n\n"
+        #    "☕ *Support us here:*\n"
+        #    "https://ko-fi.com/kumulbot/goal?g=4\n\n" 
         return (
             "🙏 *High Demand Alert*\n\n"
             "We are currently experiencing high traffic, and our AI resources are temporarily limited.\n\n"
-            "*Please try again later.*\n\n"
-            "To keep *KUMUL* running smoothly and helping Papua New Guineans find jobs, we need your support!\n\n"
-            "☕ *Support us here:*\n"
-            "https://ko-fi.com/kumulbot/goal?g=4\n\n" 
+            "*Please try again later.*\n\n\n"
+
             
             "====================================\n"
             "*_KUMUL DEVELOPMENT_*\n\n"
