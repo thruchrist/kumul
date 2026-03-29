@@ -15,7 +15,10 @@ load_dotenv()
 
 # --- 1. The Brain ---
 llm = ChatOpenAI(
-    model="llama-3.3-70b-versatile",
+    # llama-3.3-70b-versatile, openai/gpt-oss-120b, moonshotai/kimi-k2-instruct-0905, moonshotai/kimi-k2-instruct-0905
+    # llama-3.1-8b-instant, openai/gpt-oss-20b, qwen/qwen3-32b, moonshotai/kimi-k2-instruct
+    # moonshotai/kimi-k2-instruct-0905, meta-llama/llama-4-scout-17b-16e-instruct
+    model="openai/gpt-oss-120b", 
     temperature=0.15,  # Slightly higher for more natural conversation
     base_url=os.getenv("OPENAI_API_BASE"),
     openai_api_key=os.getenv("OPENAI_API_KEY"),
