@@ -1,173 +1,405 @@
 import os
 import requests
+import time
 from fastapi import FastAPI, Request, BackgroundTasks, Response
 from dotenv import load_dotenv
 from agent import get_agent_response
-from database import get_user_profile, log_interaction, update_user_profile
+from database import log_interaction
 
 load_dotenv()
 
 # --- Configuration ---
 BOT_NAME = os.getenv("BOT_NAME", "KUMUL")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "prod").lower()
+
+# Meta (Production) Config
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 META_API_URL = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
 
+# Twilio (Development) Config
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
+TWILIO_API_URL = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
+
+# WhatsApp Limits
+WHATSAPP_CHAR_LIMIT = 1600 # META LIMIT 4096, TWILIO LIMIT 1600
+MESSAGE_DELAY = 1.0  # Seconds between chunked messages
+
 app = FastAPI()
 
-# --- Helper: Send WhatsApp Message ---
-def send_whatsapp_message(to_number, body):
+
+# ==========================================
+# MESSAGE CHUNKING
+# ==========================================
+
+def chunk_message(message: str, limit: int = WHATSAPP_CHAR_LIMIT) -> list:
+    """Split long messages into WhatsApp-safe chunks"""
+    if len(message) <= limit:
+        return [message]
+    
+    chunks = []
+    current_chunk = ""
+    
+    # Split by double newline first to keep paragraphs together
+    paragraphs = message.split("\n\n")
+    
+    for para in paragraphs:
+        if len(current_chunk) + len(para) + 2 <= limit:
+            current_chunk += para + "\n\n"
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+                current_chunk = ""
+            
+            # If single paragraph is too long, split by single newline
+            if len(para) > limit:
+                lines = para.split("\n")
+                for line in lines:
+                    if len(current_chunk) + len(line) + 1 <= limit:
+                        current_chunk += line + "\n"
+                    else:
+                        if current_chunk:
+                            chunks.append(current_chunk.strip())
+                            current_chunk = ""
+                        
+                        # CRITICAL FIX: If a single line is STILL too long (e.g. a massive URL), 
+                        # force-split it by character count to prevent API rejection
+                        if len(line) > limit:
+                            for i in range(0, len(line), limit):
+                                hard_chunk = line[i:i+limit]
+                                if hard_chunk:
+                                    chunks.append(hard_chunk)
+                        else:
+                            current_chunk = line + "\n"
+            else:
+                current_chunk = para + "\n\n"
+    
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+    
+    return chunks
+
+
+# ==========================================
+# WHATSAPP MESSAGE HELPERS
+# ==========================================
+
+def send_meta_message(to_number: str, body: str, is_interactive: dict = None):
+    """Send message via Meta WhatsApp API with interactive support"""
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
         "Content-Type": "application/json"
     }
+    clean_number = to_number.replace("whatsapp:", "").replace("+", "")
+    
+    # Handle interactive messages (list, buttons)
+    if is_interactive:
+        data = {
+            "messaging_product": "whatsapp",
+            "to": clean_number,
+            "type": "interactive",
+            "interactive": is_interactive
+        }
+    else:
+        data = {
+            "messaging_product": "whatsapp",
+            "to": clean_number,
+            "type": "text",
+            "text": {"body": body}
+        }
+    
+    try:
+        resp = requests.post(META_API_URL, headers=headers, json=data, timeout=30)
+        if resp.status_code != 200:
+            print(f"❌ [META] Error {resp.status_code}: {resp.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"❌ [META] Request failed: {e}")
+        return False
+
+
+def send_meta_typing_indicator(to_number: str, is_typing: bool = True):
+    """Send typing indicator to show bot is working"""
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    clean_number = to_number.replace("whatsapp:", "").replace("+", "")
+    
     data = {
         "messaging_product": "whatsapp",
-        "to": to_number,
-        "type": "text",
-        "text": {"body": body}
+        "to": clean_number,
+        "type": "status",
+        "status": {"type": "typing" if is_typing else "available"}
     }
+    
     try:
-        resp = requests.post(META_API_URL, headers=headers, json=data)
-        if resp.status_code != 200:
-            print(f"❌ Error sending message: {resp.text}")
-        else:
-            print(f"✅ Message sent successfully to {to_number}")
-    except Exception as e:
-        print(f"❌ Request failed: {e}")
+        requests.post(META_API_URL, headers=headers, json=data, timeout=10)
+    except:
+        pass  # Don't fail on typing indicator
 
-# --- Main Logic ---
-def process_message_logic(phone_number, user_message, client_ip, lat=None, lon=None):
-    """
-    Core logic to handle incoming messages.
-    Accepts optional lat/lon for location pins.
-    """
-    # LOG: Start of process
+
+def send_twilio_message(to_number: str, body: str):
+    """Send message via Twilio"""
+    auth = (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    if not to_number.startswith("whatsapp:"):
+        to_number = f"whatsapp:{to_number}"
+    
+    data = {
+        "From": TWILIO_PHONE_NUMBER,
+        "To": to_number,
+        "Body": body
+    }
+    
+    try:
+        resp = requests.post(TWILIO_API_URL, auth=auth, data=data, timeout=30)
+        if resp.status_code != 201:
+            print(f"❌ [TWILIO] Error {resp.status_code}: {resp.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"❌ [TWILIO] Request failed: {e}")
+        return False
+
+
+def create_list_message(header: str, body: str, button_text: str, sections: list) -> dict:
+    """Create WhatsApp List Message format"""
+    return {
+        "type": "list",
+        "header": {
+            "type": "text",
+            "text": header[:60]  # Max 60 chars for header
+        },
+        "body": {
+            "text": body
+        },
+        "footer": {
+            "text": "🇵🇬 KUMUL Job Search"
+        },
+        "action": {
+            "button": button_text[:20],  # Max 20 chars
+            "sections": sections[:10]  # Max 10 sections
+        }
+    }
+
+
+# ==========================================
+# MAIN PROCESSING LOGIC
+# ==========================================
+
+def process_message_logic(phone_number: str, user_message: str, client_ip: str, 
+                          incoming_channel: str = "meta", lat: float = None, lon: float = None):
+    """Main message processing with full feature support"""
+    
+    # Channel override for dev
+    active_channel = "twilio" if ENVIRONMENT == "dev" else incoming_channel
+    
     print(f"\n{'='*10} NEW INTERACTION {'='*10}")
     print(f"📞 Phone: {phone_number}")
-    print(f"💬 Message: {user_message}")
-    if lat and lon:
-        print(f"📍 Location Pin: {lat}, {lon}")
+    print(f"💬 Message: {user_message[:100]}...")
     
-    # Initialize variables for logging
-    ai_response = "⚠️ Sorry, I encountered an error."
-    detected_profession = None
-    detected_location_text = None
-
+    # Send typing indicator (Meta only)
+    if active_channel == "meta":
+        send_meta_typing_indicator(phone_number, is_typing=True)
+    
     try:
-        # 1. Handle Location Update (if provided via pin)
-        if lat and lon:
-            update_user_profile(phone_number, lat=lat, lon=lon)
-            print("💾 Location coordinates saved to user profile.")
-
-        # 2. Get User Profile (Context)
-        user = get_user_profile(phone_number)
-        if user:
-            print(f"👤 Profile Found: {user.profession} in {user.location}")
-        else:
-            print(f"👤 Profile: New User (No profile found)")
-
-        # 3. Get AI Response
-        # The agent handles extraction of profession/location automatically
+        # 1. Get AI Response
         print("🧠 Thinking...")
-        ai_response = get_agent_response(user_message, phone_number, user)
-        print(f"🤖 Response: {ai_response}")
+        start_time = time.time()
         
-        # 4. POST-PROCESSING: Capture updated profile data for logging
-        # We fetch the profile again to see if the Agent extracted new info (Requirement 5)
-        updated_user = get_user_profile(phone_number)
-        if updated_user:
-            detected_profession = updated_user.profession
-            detected_location_text = updated_user.location
-
-        # 5. PERMANENT LOGGING (Requirement 5)
-        # We log the message, response, AND the extracted data.
-        # Note: We do NOT log lat/lon in InteractionLog to match your existing DB schema.
+        agent_result = get_agent_response(user_message, phone_number)
+        ai_response = agent_result["response"]
+        tools_used = agent_result.get("tools_used", [])
+        intent = agent_result.get("intent", "unknown")
+        entities = agent_result.get("entities", {})
+        
+        processing_time = time.time() - start_time
+        print(f"🤖 Response ready ({processing_time:.1f}s)")
+        print(f"🔧 Tools used: {tools_used}")
+        
+        # 2. Stop typing indicator
+        if active_channel == "meta":
+            send_meta_typing_indicator(phone_number, is_typing=False)
+        
+        # 3. Send Response (with chunking if needed)
+        chunks = chunk_message(ai_response)
+        
+        for i, chunk in enumerate(chunks):
+            if active_channel == "twilio":
+                send_twilio_message(phone_number, chunk)
+            else:
+                send_meta_message(phone_number, chunk)
+            
+            # Delay between chunks to avoid rate limiting
+            if i < len(chunks) - 1:
+                time.sleep(MESSAGE_DELAY)
+        
+        # 4. Log Interaction
         log_interaction(
             phone_number=phone_number,
-            ip_address=client_ip,
             user_message=user_message,
             bot_response=ai_response,
-            detected_profession=detected_profession,
-            detected_location=detected_location_text
+            interaction_type=intent,
+            tools_used=tools_used,
+            intent=intent,
+            entities=entities,
+            processing_time_ms=int(processing_time * 1000),
+            client_ip=client_ip,
+            channel=active_channel
         )
-        print("💾 Interaction logged to permanent database.")
-
-        # 6. Send Reply
-        send_whatsapp_message(phone_number, ai_response)
-        print(f"{'='*10} END INTERACTION {'='*10}\n")
-
+        
+        print(f"✅ Completed - {len(chunks)} message(s) sent")
+        
     except Exception as e:
-        print(f"❌ CRITICAL ERROR in process_message_logic: {e}")
-        # Send a fallback message so the user isn't left hanging
-        send_whatsapp_message(phone_number, "⚠️ Sorry, a server error occurred. Please try again later.")
+        print(f"❌ CRITICAL ERROR: {e}")
+        
+        error_message = "⚠️ *Something went wrong*\n\nPlease try again or type *'help'* for options."
+        
+        if active_channel == "twilio":
+            send_twilio_message(phone_number, error_message)
+        else:
+            send_meta_message(phone_number, error_message)
+        
+        # Log the error
+        log_interaction(
+            phone_number=phone_number,
+            user_message=user_message,
+            bot_response=error_message,
+            interaction_type="error",
+            error_message=str(e),
+            client_ip=client_ip,
+            channel=active_channel
+        )
 
-# --- Webhook Endpoints ---
+
+# ==========================================
+# WEBHOOK ENDPOINTS
+# ==========================================
 
 @app.get("/webhook")
 async def verify_webhook(request: Request):
+    """Meta webhook verification"""
     mode = request.query_params.get("hub.mode")
     token = request.query_params.get("hub.verify_token")
     challenge = request.query_params.get("hub.challenge")
+    
     if mode == "subscribe" and token == VERIFY_TOKEN:
-        print("✅ WEBHOOK_VERIFIED")
+        print("✅ META WEBHOOK VERIFIED")
         return Response(content=challenge, status_code=200)
-    print("❌ Verification Failed")
+    
     return Response(content="Forbidden", status_code=403)
 
-@app.post("/webhook")
-async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
-    payload = await request.json()
-    
-    # Capture Client IP (Requirement 5)
-    client_host = request.client.host if request.client else "Unknown"
 
+@app.post("/webhook")
+async def meta_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Meta WhatsApp webhook"""
+    payload = await request.json()
+    client_host = request.client.host if request.client else "Unknown"
+    
+    # Handle webhook verification echo
     if payload.get("object") == "whatsapp_business_account":
         try:
-            entry = payload["entry"][0]
-            changes = entry["changes"][0]
-            value = changes["value"]
+            entry = payload.get("entry", [{}])[0]
+            changes = entry.get("changes", [{}])[0]
+            value = changes.get("value", {})
             
+            # Handle messages
             if "messages" in value:
                 message = value["messages"][0]
-                phone_number = message["from"]
+                phone_number = message.get("from", "")
+                user_message = ""
+                lat, lon = None, None
                 
-                # --- Handle Text Messages ---
-                if message["type"] == "text":
-                    user_message = message["text"]["body"]
-                    background_tasks.add_task(
-                        process_message_logic, 
-                        phone_number, 
-                        user_message, 
-                        client_host,
-                        None, # lat
-                        None  # lon
-                    )
+                msg_type = message.get("type", "")
                 
-                # --- Handle Location Pins (Requirement 1 & 5) ---
-                elif message["type"] == "location":
-                    loc = message["location"]
-                    lat = loc.get("latitude")
-                    lon = loc.get("longitude")
-                    
-                    # Create a readable message for the logs/agent
-                    user_message = "📍 User shared a location pin."
-                    
+                if msg_type == "text":
+                    user_message = message.get("text", {}).get("body", "")
+                elif msg_type == "location":
+                    lat = message.get("location", {}).get("latitude")
+                    lon = message.get("location", {}).get("longitude")
+                    user_message = f"📍 Location shared: {lat}, {lon}"
+                elif msg_type == "interactive":
+                    # Handle list/button responses
+                    interactive = message.get("interactive", {})
+                    if interactive.get("type") == "list_reply":
+                        user_message = interactive.get("list_reply", {}).get("title", "")
+                    elif interactive.get("type") == "button_reply":
+                        user_message = interactive.get("button_reply", {}).get("title", "")
+                elif msg_type == "button":
+                    user_message = message.get("button", {}).get("text", "")
+                
+                if user_message:
                     background_tasks.add_task(
-                        process_message_logic, 
-                        phone_number, 
-                        user_message, 
+                        process_message_logic,
+                        phone_number,
+                        user_message,
                         client_host,
+                        "meta",
                         lat,
                         lon
                     )
-
+                    
         except Exception as e:
-            print(f"❌ Error parsing webhook payload: {e}")
-
+            print(f"❌ Meta payload error: {e}")
+    
     return Response(status_code=200)
+
+
+@app.post("/twilio")
+async def twilio_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Twilio WhatsApp webhook"""
+    form_data = await request.form()
+    client_host = request.client.host if request.client else "Unknown"
+    
+    phone_number = form_data.get("From", "")
+    user_message = form_data.get("Body", "")
+    lat = form_data.get("Latitude")
+    lon = form_data.get("Longitude")
+    
+    # Handle media messages
+    media_url = form_data.get("MediaUrl0")
+    if media_url and not user_message:
+        user_message = "📎 Media file received"
+    
+    if not user_message:
+        user_message = "⚠️ Empty message"
+    
+    background_tasks.add_task(
+        process_message_logic,
+        phone_number,
+        user_message,
+        client_host,
+        "twilio",
+        lat,
+        lon
+    )
+    
+    return Response(status_code=200)
+
 
 @app.get("/")
 async def root():
-    return {"status": "online", "model": "Llama-3.3-70B"}
+    """Health check endpoint"""
+    return {
+        "status": "online",
+        "bot": BOT_NAME,
+        "environment": ENVIRONMENT,
+        "version": "2.0.0"
+    }
+
+
+@app.get("/health")
+async def health():
+    """Detailed health check"""
+    return {
+        "status": "healthy",
+        "checks": {
+            "meta_token": bool(WHATSAPP_TOKEN),
+            "twilio_configured": bool(TWILIO_ACCOUNT_SID),
+            "database": "configured"
+        }
+    }
