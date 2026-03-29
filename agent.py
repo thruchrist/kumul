@@ -1,4 +1,6 @@
 import os
+import re
+import json
 from datetime import datetime
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_openai import ChatOpenAI
@@ -14,21 +16,42 @@ from database import get_user_profile, update_user_profile, log_interaction
 load_dotenv()
 
 # --- 1. The Brain ---
+###### SINGLE BRAIN ###########
+# llm = ChatOpenAI(
+#     # llama-3.3-70b-versatile, openai/gpt-oss-120b, moonshotai/kimi-k2-instruct-0905, moonshotai/kimi-k2-instruct-0905
+#     # llama-3.1-8b-instant, openai/gpt-oss-20b, qwen/qwen3-32b, moonshotai/kimi-k2-instruct
+#     # moonshotai/kimi-k2-instruct-0905, meta-llama/llama-4-scout-17b-16e-instruct
+#     model="openai/gpt-oss-120b", 
+#     temperature=0.15,  # Slightly higher for more natural conversation
+#     base_url=os.getenv("OPENAI_API_BASE"),
+#     openai_api_key=os.getenv("OPENAI_API_KEY"),
+# )
+###########################
+# --- Model Rotation System ---
+MODEL_FALLBACK_LIST = [
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-120b",
+    "moonshotai/kimi-k2-instruct-0905",
+    "llama-3.1-8b-instant",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3-32b",
+    "moonshotai/kimi-k2-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct"
+]
+
+# --- 1. The Brain ---
 llm = ChatOpenAI(
-    # llama-3.3-70b-versatile, openai/gpt-oss-120b, moonshotai/kimi-k2-instruct-0905, moonshotai/kimi-k2-instruct-0905
-    # llama-3.1-8b-instant, openai/gpt-oss-20b, qwen/qwen3-32b, moonshotai/kimi-k2-instruct
-    # moonshotai/kimi-k2-instruct-0905, meta-llama/llama-4-scout-17b-16e-instruct
-    model="openai/gpt-oss-120b", 
-    temperature=0.15,  # Slightly higher for more natural conversation
+    model=MODEL_FALLBACK_LIST[0],
+    temperature=0.15,
     base_url=os.getenv("OPENAI_API_BASE"),
     openai_api_key=os.getenv("OPENAI_API_KEY"),
 )
-
+###########################
 # --- 2. The Tools ---
 tools = ALL_TOOLS
 
 # --- 3. System Prompt (Comprehensive PNG Context) ---
-SYSTEM_PROMPT = """You are KUMUL, Papua New Guinea's #1 AI Job Search Assistant. You help PNG job seekers find employment quickly and easily through WhatsApp.
+SYSTEM_PROMPT = """You are KUMUL AI, Papua New Guinea's #1 AI Job Search Assistant. You help PNG job seekers find employment quickly and easily through WhatsApp. 
 
 <IDENTITY>
 - Name: KUMUL (named after PNG's national bird, the Bird of Paradise - "Kumul")
@@ -42,6 +65,8 @@ THE CURRENT USER MESSAGE IS THE ONLY THING THAT MATTERS.
 - If user says "hello", "hi", "hey", "morning" -> YOU MUST GREET THEM. Do NOT search for jobs.
 - IGNORE any previous job requests in history if the current message is a greeting or unrelated.
 - NEVER call tools for greetings. Just respond with text.
+- ALWAYS start greetings with EXACTLY "🇵🇬 *Hi Wantok!*" (DO NOT use "Gutde", "Gude", or "Good day" - these are strictly banned).
+- ALWAYS end a greeting message exactly with "_WOK MAS GO YET_" (put it on a new line at the very end of your greeting).
 </CURRENT_MESSAGE_PRIORITY>
 
 <CORE_CAPABILITIES>
@@ -55,27 +80,26 @@ THE CURRENT USER MESSAGE IS THE ONLY THING THAT MATTERS.
 8. **PROFILE**: Update user profile with update_profile tool
 </CORE_CAPABILITIES>
 
-<USER PROFILE SYSTEM>
-You have access to the user's profile via conversation context. The profile contains:
-- name, location, target_roles, skills, experience_level, education, is_onboarded
+<USER_PROFILE SYSTEM>
+You have access to context to provide better job matches, but you MUST STRICTLY protect user privacy.
 
-When a new user arrives (no profile), gently collect key info:
-- Ask their name naturally in conversation
-- Ask what kind of work they're looking for
-- Ask their preferred location
-- Update their profile using update_profile tool
+<PRIVACY RULES>
+- NEVER call the user by their name. Just use "Hi there!", "Hello!" or similar generic greetings.
+- NEVER give the impression that you are reading from a database. Act as if you just naturally remember from the ongoing chat.
+- NEVER use phrases like "Based on your profile", "In your records", "I have saved", "From what you told me before", or "I remember you told me". Just provide the answer naturally.
+- If they mentioned a job role 10 messages ago, just say "Here are those accounting jobs" without explaining *how* you know it.
+</PRIVACY_RULES>
 
-For returning users:
-- Greet them by name if known
-- Reference their previous interests
-- Suggest relevant searches based on their profile
+When interacting:
+- Focus on finding out what kind of work they want and where.
+- If you naturally infer their profession, use update_profile to save it, but say "Got it!" instead of "I've saved this to your profile."
 </USER PROFILE SYSTEM>
 
 <CONVERSATION FLOWS>
 
 **Flow 1: First-time User**
-User: "Hi" or "Hello"
-You: "🇵🇬 *Gutde! I'm KUMUL, your PNG Job Search Assistant!*\n\nI can help you find jobs across Papua New Guinea.\n\nTo get started, what's your name?"
+User: "Hi" or "Hello" or "Hey" or "Yo"
+You: "🇵🇬 *Hi Wantok! I'm KUMUL, your PNG Job Search Assistant!*\n\nI can help you find jobs across Papua New Guinea.\n\nWhat kind of work are you looking for? \n\n_WOK MAS GO YET_"
 
 **Flow 2: Job Search Request**
 User: "Find me accounting jobs in Port Moresby"
@@ -163,6 +187,7 @@ User Profile: {user_profile}
 11. ALWAYS prioritize the CURRENT message over chat history. If user says "hello", treat it as a greeting, not a job request.
 12. **NEVER SUMMARIZE JOB SEARCH RESULTS**. When the search_jobs tool returns results, you MUST output its EXACT text directly to the user. Do NOT write a custom summary like "Here are the results: 1. Job A 2. Job B". This strips the links and wastes tokens. Just output the tool's response word-for-word.
 13. **NEVER RE-SEARCH FOR LINKS**. If a user says "where are the links" or "provide the links", tell them "The links were provided in the message above! Scroll up to see the 🔗 links next to each job." Do NOT call the search tool again.
+14. **WHEN USER ASKS FOR "MORE" JOBS**: You MUST use the `exclude_urls` parameter in the search_jobs tool. Look at the previous search results in the chat history, extract the URLs (the links starting with https:// after 🔗), and pass them as a list to `exclude_urls`. This prevents showing the exact same jobs twice.
 </CRITICAL_RULES>"""
 
 
@@ -237,17 +262,97 @@ def get_agent_response(user_input: str, phone_number: str) -> dict:
         result["intent"] = intent
         result["entities"] = entities
         
-        # Invoke agent
-        response = agent_with_memory.invoke(
-            {
-                "input": user_input,
-                "current_date": datetime.now().strftime("%Y-%m-%d"),
-                "phone_number": phone_number,
-                "user_profile": profile_str
-            },
-            config={"configurable": {"session_id": phone_number}}
-        )
+        # If user asks for more jobs, extract previous URLs and inject into input
+        final_input = user_input
+        if intent == "more_jobs":
+            try:
+                history = get_session_history(phone_number)
+                previous_urls = set()
+                for msg in history.messages:
+                    if hasattr(msg, 'content') and msg.content:
+                        urls = re.findall(r'https?://[^\s]+', msg.content)
+                        previous_urls.update(urls)
+                
+                if previous_urls:
+                    url_list = list(previous_urls)
+                    final_input += f"\n\n[INSTRUCTIONS: You MUST pass these exact URLs into the exclude_urls parameter of search_jobs to avoid duplicates: {json.dumps(url_list)}]"
+            except Exception as e:
+                print(f"❌ History extraction error: {e}")
         
+        # INVOKE SINGLE AGENT MODEL
+        # response = agent_with_memory.invoke(
+        #     {
+        #         "input": final_input,
+        #         "current_date": datetime.now().strftime("%Y-%m-%d"),
+        #         "phone_number": phone_number,
+        #         "user_profile": profile_str
+        #     },
+        #     config={"configurable": {"session_id": phone_number}}
+        # )
+        ####### ROTATION OF MODEL ##############
+        # Invoke agent with safe fallback rotation
+        response = None
+        last_error = None
+        
+        for attempt in range(len(MODEL_FALLBACK_LIST)):
+            current_model = MODEL_FALLBACK_LIST[attempt]
+            try:
+                print(f"🧠 Trying model: {current_model}...", flush=True)
+                
+                # Create fresh LLM & agent to prevent background thread deadlocks
+                fallback_llm = ChatOpenAI(
+                    model=current_model,
+                    temperature=0.15,
+                    base_url=os.getenv("OPENAI_API_BASE"),
+                    openai_api_key=os.getenv("OPENAI_API_KEY"),
+                )
+                fallback_agent = create_tool_calling_agent(fallback_llm, tools, prompt)
+                fallback_executor = AgentExecutor(
+                    agent=fallback_agent, 
+                    tools=tools, 
+                    verbose=False, 
+                    handle_parsing_errors=True,
+                    max_iterations=2, 
+                    return_intermediate_steps=True
+                )
+                fallback_chain = RunnableWithMessageHistory(
+                    fallback_executor,
+                    get_session_history,
+                    input_messages_key="input",
+                    history_messages_key="chat_history"
+                )
+                
+                response = fallback_chain.invoke(
+                    {
+                        "input": final_input,
+                        "current_date": datetime.now().strftime("%Y-%m-%d"),
+                        "phone_number": phone_number,
+                        "user_profile": profile_str
+                    },
+                    config={"configurable": {"session_id": phone_number}}
+                )
+                print(f"✅ Success with: {current_model}", flush=True)
+                break
+                
+            except Exception as e:
+                last_error = e
+                error_msg = str(e)
+                print(f"❌ Model {current_model} failed: {error_msg[:100]}", flush=True)
+                
+                if any(err in error_msg for err in ["429", "Rate limit", "insufficient_quota", "quota exceeded", "resource_exhausted"]):
+                    if attempt < len(MODEL_FALLBACK_LIST) - 1:
+                        print(f"⚠️ Rotating to next model...", flush=True)
+                        continue
+                    else:
+                        raise Exception("429_RATE_LIMIT") from e
+                else:
+                    raise
+        
+        if response is None:
+            raise Exception(f"All models failed. Last error: {last_error}")
+
+        ######### END ROTATION OF MODEL ###################
+
         # Extract tools used and handle tool outputs directly
         intermediate_steps = response.get('intermediate_steps', [])
         if intermediate_steps:
@@ -274,7 +379,7 @@ def get_agent_response(user_input: str, phone_number: str) -> dict:
         error_msg = str(e)
         print(f"❌ Agent Error: {error_msg}")
         
-        if "429" in error_msg or "Rate limit" in error_msg:
+        if error_msg == "429_RATE_LIMIT" or "429" in error_msg or "Rate limit" in error_msg:
             result["response"] = (
                 "🙏 *High Demand Alert*\n\n"
                 "We are currently experiencing high traffic, and our AI resources are temporarily limited.\n\n"
@@ -343,6 +448,10 @@ def _detect_intent(message: str, profile: dict) -> tuple:
     # Profile info shared
     if any(p in msg_lower for p in ["my name is", "i am ", "i'm ", "i live in", "located in", "based in", "i have experience"]):
         return "profile_update", {}
+    
+    # More jobs
+    if any(m in msg_lower for m in ["more", "is that all", "any other", "what else", "show more", "list more", "next", "anything else"]):
+        return "more_jobs", {}
     
     # Help
     if msg_lower in ["help", "menu", "options", "what can you do"]:

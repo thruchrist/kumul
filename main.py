@@ -198,9 +198,9 @@ def process_message_logic(phone_number: str, user_message: str, client_ip: str,
     # Channel override for dev
     active_channel = "twilio" if ENVIRONMENT == "dev" else incoming_channel
     
-    print(f"\n{'='*10} NEW INTERACTION {'='*10}")
-    print(f"📞 Phone: {phone_number}")
-    print(f"💬 Message: {user_message[:100]}...")
+    print(f"\n{'='*10} NEW INTERACTION {'='*10}", flush=True)
+    print(f"📞 Phone: {phone_number}", flush=True)
+    print(f"💬 Message: {user_message[:100]}...", flush=True)
     
     # Send typing indicator (Meta only)
     if active_channel == "meta":
@@ -255,7 +255,7 @@ def process_message_logic(phone_number: str, user_message: str, client_ip: str,
         print(f"✅ Completed - {len(chunks)} message(s) sent")
         
     except Exception as e:
-        print(f"❌ CRITICAL ERROR: {e}")
+        print(f"❌ CRITICAL ERROR: {e}", flush=True)
         
         error_message = "⚠️ *Something went wrong*\n\nPlease try again or type *'help'* for options."
         

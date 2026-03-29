@@ -286,13 +286,14 @@ def _format_job_result(item: dict, index: int) -> str:
 # ==========================================
 
 @tool
-def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
+def search_jobs(role: str, location: str = "Papua New Guinea", exclude_urls: list = None) -> str:
     """
     Search for jobs based on role and location. Use this when user wants to find jobs.
     
     Args:
         role: The job title or role to search for (e.g., "Accountant", "Mining Engineer")
         location: Where to search (e.g., "Port Moresby", "Lae", "Papua New Guinea", "Australia")
+        exclude_urls: List of URLs already shown to the user. Use this when user asks for "more" jobs to avoid duplicates.
     
     Returns:
         Formatted list of job listings with links
@@ -300,6 +301,7 @@ def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
     if not role:
         return "⚠️ Please specify what job role you're looking for."
     
+    excluded = set(exclude_urls) if exclude_urls else set()
     normalized_location = _normalize_location(location)
     scopes = _detect_scope(location)
     
@@ -328,7 +330,7 @@ def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
                 
                 for item in res.get('results', []):
                     url = item.get('url', '')
-                    if url not in seen_urls and _is_valid_job_title(item.get('title', '')):
+                    if url not in seen_urls and url not in excluded and _is_valid_job_title(item.get('title', '')):
                         seen_urls.add(url)
                         all_results.append(item)
             except Exception as e:
@@ -344,7 +346,7 @@ def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
                 )
                 for item in res.get('results', []):
                     url = item.get('url', '')
-                    if url not in seen_urls and _is_valid_job_title(item.get('title', '')):
+                    if url not in seen_urls and url not in excluded and _is_valid_job_title(item.get('title', '')):
                         seen_urls.add(url)
                         all_results.append(item)
             except Exception as e:
@@ -362,7 +364,7 @@ def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
             )
             for item in res.get('results', []):
                 url = item.get('url', '')
-                if url not in seen_urls and _is_valid_job_title(item.get('title', '')):
+                if url not in seen_urls and url not in excluded and _is_valid_job_title(item.get('title', '')):
                     seen_urls.add(url)
                     all_results.append(item)
         except Exception as e:
@@ -380,7 +382,7 @@ def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
             )
             for item in res.get('results', []):
                 url = item.get('url', '')
-                if url not in seen_urls and _is_valid_job_title(item.get('title', '')):
+                if url not in seen_urls and url not in excluded and _is_valid_job_title(item.get('title', '')):
                     seen_urls.add(url)
                     all_results.append(item)
         except Exception as e:
@@ -388,6 +390,8 @@ def search_jobs(role: str, location: str = "Papua New Guinea") -> str:
     
     # Format results
     if not all_results:
+        if excluded:
+            return f"🚫 *No additional jobs found for '{role}' in {normalized_location}.*\n\nYou've seen all available jobs matching this search.\n\n💡 *Try something else:*\n• A different job title (e.g., 'Data Analyst' instead of 'Research Scientist')\n• A different location\n• 'categories' to browse other industries"
         return (
             f"🤷 *No jobs found for '{role}' in {normalized_location}*\n\n"
             "💡 *Try these tips:*\n"
