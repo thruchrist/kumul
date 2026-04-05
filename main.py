@@ -5,6 +5,8 @@ from fastapi import FastAPI, Request, BackgroundTasks, Response
 from dotenv import load_dotenv
 from agent import get_agent_response
 from database import log_interaction
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
@@ -380,16 +382,12 @@ async def twilio_webhook(request: Request, background_tasks: BackgroundTasks):
     
     return Response(status_code=200)
 
+# Serve static files (HTML, CSS, JS)
+app.mount("/", StaticFiles(directory="templates", html=True), name="static")
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "online",
-        "bot": BOT_NAME,
-        "environment": ENVIRONMENT,
-        "version": "2.0.0"
-    }
+# @app.get("/")
+# async def root():
+#     return FileResponse("templates/index.html")
 
 
 @app.get("/health")

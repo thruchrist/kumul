@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Documentation | KUMUL AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <span>KUMUL</span> AI Docs
+        </div>
+        <ul class="sidebar-nav">
+            <li><a href="guide.html">User Guide</a></li>
+            <li><a href="about.html">About & Features</a></li>
+            <li>
+                <!-- ACTIVE STATE HERE -->
+                <a href="docs.html" class="active">Technical Documentation</a>
+                <ul>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#database">Database Schema</a></li>
+                    <li><a href="#setup">Local Setup</a></li>
+                </ul>
+            </li>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <main class="main-content">
+            
+            <article>
+                <h1>Technical Documentation</h1>
+                <p>This documentation provides an overview of the system architecture for developers contributing to KUMUL AI.</p>
+            </article>
+
+            <article id="architecture">
+                <h2>System Architecture</h2>
+                <p>KUMUL AI is an event-driven application. It relies on webhooks from the WhatsApp Business API.</p>
+                <div class="code-block">
+User -> WhatsApp -> FastAPI Webhook -> LangChain Agent -> Tools/Search -> Response -> WhatsApp -> User
+                </div>
+                <p>The system is stateless; all context is persisted in a PostgreSQL database.</p>
+            </article>
+
+            <article id="database">
+                <h2>Database Schema</h2>
+                <p>We use two primary tables:</p>
+                <ul>
+                    <li><strong>user_profiles:</strong> Stores current user state (Profession, Location, Lat/Long). Updates dynamically.</li>
+                    <li><strong>interaction_logs:</strong> Permanent record of every message for compliance and analytics.</li>
+                </ul>
+            </article>
+
+            <article id="setup">
+                <h2>Local Setup</h2>
+                <p>To run KUMUL AI locally:</p>
+                <div class="code-block">
+git clone https://github.com/your-repo/kumul.git
+cd kumul
+python -m venv venv
+source venv/bin/activate  # or .\venv\Scripts\activate on Windows
+pip install -r requirements.txt
+uvicorn main:app --reload
+                </div>
+                <p>You will need to expose your localhost via <strong>ngrok</strong> to configure the WhatsApp webhook.</p>
+            </article>
+
+        </main>
+
+        <footer>
+            &copy; 2026 KUMUL AI Development Team. All Rights Reserved.
+        </footer>
+    </div>
+
+</body>
+</html>
