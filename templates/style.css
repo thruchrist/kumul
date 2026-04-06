@@ -1,3 +1,19 @@
+/* style.css - Glassmorphism AI Theme (Anchored Layout) */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --bg-dark: #000000;
+    --bg-gradient-start: #00101a;
+    --primary-green: #25D366;
+    --secondary-teal: #128C7E;
+    --text-main: #ffffff;
+    --text-muted: #a0aec0;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
 /* --- 1. Reset & Base --- */
 * {
     margin: 0;
@@ -5,204 +21,269 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #0d1117; /* Git Dark Background */
-    color: #c9d1d9; /* Git Text Color */
-    line-height: 1.3;
-    display: flex;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: radial-gradient(ellipse at bottom, var(--bg-gradient-start) 0%, var(--bg-dark) 100%);
+    color: var(--text-main);
+    line-height: 1.2;
     min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
-/* --- 2. Sidebar Navigation --- */
-.sidebar {
-    width: 260px;
-    background-color: #161b22;
-    padding: 20px;
-    border-right: 1px solid #30363d;
+/* --- 2. Particle Canvas Background --- */
+#bg-canvas {
     position: fixed;
-    height: 100vh;
-    overflow-y: auto;
-    flex-shrink: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+/* --- 3. Anchored Navigation Header --- */
+.top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    
+    /* Alignment Fix: Constrain header to body width */
+    width: 100%;
+    max-width: 1000px; 
+    margin: 0 auto; /* Centers the header strip */
+    
+    background: rgba(8, 8, 8, 0.9);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid #000;
+    /* Add side borders to match the 'card' look if desired */
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    
+    padding: 10px 20px; /* This padding now matches the container's inner spacing */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-.sidebar-logo {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #fff;
-    margin-bottom: 20px;
+.nav-logo {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-main);
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.sidebar-logo span {
-    color: #25D366;
-}
-
-.sidebar-nav {
-    list-style: none;
-}
-
-.sidebar-nav li {
-    margin-bottom: 8px;
-}
-
-.sidebar-nav a {
-    color: #8b949e;
+    gap: 8px;
     text-decoration: none;
-    font-size: 0.9rem;
-    padding: 3px 2px;
-    border-radius: 6px;
-    display: block;
-    transition: background 0.2s;
 }
 
-.sidebar-nav a:hover {
-    color: #c9d1d9;
-    background-color: #21262d;
+.nav-logo:hover {
+    text-decoration: none;
 }
 
-.sidebar-nav a.active {
-    color: #fff;
-    background-color: #21262d;
+.nav-logo span {
+    color: var(--primary-green);
 }
 
-.nav-section-title {
+.nav-links {
+    display: flex;
+    gap: 15px;
+}
+
+.nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
     font-size: 0.8rem;
-    font-weight: 600;
-    color: #8b949e;
-    text-transform: uppercase;
-    margin-top: 20px;
-    margin-bottom: 8px;
-    padding-left: 10px;
+    font-weight: 500;
+    padding: 5px 3px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
 }
 
-/* --- 3. Main Content Area --- */
-.main-content {
-    margin-left: 260px;
-    padding: 40px 60px;
-    flex: 1;
+.nav-links a:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.1);
+	text-decoration: none;
+}
+
+.nav-links a.active {
+    color: var(--primary-green);
+    background: rgba(37, 211, 102, 0.15);
+}
+
+/* --- 4. Main Container (The Glass Card) --- */
+.container {
+    position: relative;
     max-width: 1000px;
+    margin: 0 auto;
+    padding: 0px; /* REMOVED side padding so card fills the full 1000px */
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
-article {
-    margin-bottom: 20px;
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    
+    /* Borders: 1px solid black on sides creates a vertical line connecting header/footer */
+    border-left: 1px solid #000;
+    border-right: 1px solid #000; 
+    border-top: none;
+    border-bottom: none;
+    
+    border-radius: 0px;
+    padding: 20px; /* This provides the internal spacing for text */
+    box-shadow: var(--glass-shadow);
+    flex: 1;
 }
 
-/* --- 4. Typography --- */
-h1, h2, h3, h4 {
-    font-family: 'Plus Jakarta Sans', sans-serif;	
-    color: #e6edf3;
-    margin-top: 8px;
-    margin-bottom: 7px;
-    font-weight: 600;
-    line-height: 1.25;
+/* Remove bottom margin from last child inside card */
+.glass-card > :last-child {
+    margin-bottom: 0;
 }
 
+/* --- 5. Typography --- */
 h1 {
-    font-size: 2rem;
-    border-bottom: 1px solid #30363d;
-    padding-bottom: 7px;
-    margin-top: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    background: linear-gradient(135deg, #fff 0%, #a5f3fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+	text-transform: uppercase;
 }
 
 h2 {
-    font-size: 1.3rem;
-    border-bottom: 1px solid #21262d;
-    padding-bottom: 3px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-green);
     margin-top: 20px;
+    margin-bottom: 8px;
+   /* border-left: 3px solid var(--secondary-teal); 
+    padding-left: 10px;*/
 }
 
 h3 {
-    font-size: 1.1rem;
-    color: #58a6ff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-top: 15px;
+    margin-bottom: 5px;
 }
 
 p {
     margin-bottom: 8px;
-    font-size: 0.95rem;
-}
-
-/* --- 5. Elements --- */
-a {
-    color: #58a6ff;
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-.code-block {
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    font-size: 0.85rem;
-    color: #79c0ff;
-    margin: 12px 0;
-    overflow-x: auto;
-    white-space: pre-wrap;
-}
-
-strong {
-    color: #e6edf3;
-    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
 ul, ol {
-    padding-left: 2em;
-    margin-bottom: 16px;
-    font-size: 0.95rem;	
+    padding-left: 20px;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
 li {
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
-/* --- 6. Footer --- */
-footer {
-    margin-left: 260px;
-    padding: 20px 60px;
-    border-top: 1px solid #30363d;
-    color: #8b949e;
-    font-size: 0.8rem;
+a {
+    color: var(--primary-green);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: #6ee7b7;
+    text-decoration: underline;
+}
+
+/* --- 6. Elements --- */
+.code-block {
+    background: rgba(0, 0, 0, 1);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 0px 9px;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #a5f3fc;
+    margin: 10px 0;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+.last-updated {
+    font-size: 0.75rem;
+    color: #575757;
+    margin-bottom: 15px;
+    display: block;
+}
+
+strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* --- 7. Anchored Footer --- */
+.footer {
+    position: relative;
+    z-index: 2;
+    
+    /* Alignment Fix: Constrain footer to body width */
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto; /* Centers the footer strip */
+    
+    padding: 15px 20px;
+    background: rgba(8, 8, 8, 0.9);
+    border-top: 1px solid #000;
+    /* Add side borders to match the header */
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    
     text-align: center;
+    color: var(--text-muted);
+    font-size: 0.65rem;
 }
 
-/* --- 7. Responsive --- */
-@media (max-width: 900px) {
-    body {
-        flex-direction: column;
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .top-nav {
+        padding: 10px 15px;
     }
     
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        border-right: none;
-        border-bottom: 1px solid #30363d;
-        padding: 15px;
+    .nav-links {
+        gap: 3px;
     }
 
-    .sidebar-nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+    .nav-links a {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+
+    .container {
+        margin-top: 50px;
+        padding: 0 10px;
+    }
+
+    .glass-card {
+        padding: 10px;
+        border-radius: 0px;
+    }
+
+    h1 {
+        font-size: 1.1rem;
     }
     
-    .sidebar-nav li {
-        margin-bottom: 0;
-    }
-
-    .nav-section-title {
-        display: none;
-    }
-
-    .main-content, footer {
-        margin-left: 0;
-        padding: 20px;
+    .footer {
+        padding: 10px 15px;
     }
 }

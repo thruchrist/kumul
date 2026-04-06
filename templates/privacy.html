@@ -3,57 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy | KUMUL AI</title>
+    <title>Privacy & Terms | KUMUL AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <nav class="sidebar">
-        <div class="sidebar-logo"><span>KUMUL</span> AI Docs</div>
-        <ul class="sidebar-nav">
-            <li><a href="index.html">Home</a></li>
-            <li><a href="guide.html">User Guide</a></li>
-            <li><a href="about.html">About & Features</a></li>
-            <li><a href="docs.html">Technical Documentation</a></li>
-            <li><a href="privacy.html" class="active">Privacy Policy</a></li>
-        </ul>
+    <!-- Background Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Floating Navigation -->
+    <nav class="top-nav">
+        <div class="nav-logo">KUMUL <span>AI</span></div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="releasenote.html">Release Note</a>
+            <a href="privacy.html" class="active">Terms & Privacy</a>
+        </div>
     </nav>
 
-    <div class="content-wrapper">
-        <main class="main-content">
+    <!-- Main Content -->
+    <div class="container">
+        <div class="glass-card">
             <article>
+                <h1>Terms of Use</h1>
+                <p><em>Effective: March 30, 2026</em></p>
+                
+                <p>Thank you for using KUMUL AI!</p>
+
+                <p>These Terms of Use apply to your use of the KUMUL AI WhatsApp Assistant and associated services (collectively, “Services”). These Terms form an agreement between you and <strong>Optimus Geotechnics Ltd</strong>. By using our Services, you agree to these Terms.</p>
+
+                <p>Our Privacy Policy explains how we collect and use personal information. Although it does not form part of these Terms, it is an important document that you should read.</p>
+
+                <h2>Who we are</h2>
+                <p>Optimus Geotechnics Ltd is a data analytics and AI consultancy based in Papua New Guinea. Our mission with KUMUL AI is to connect local talent with career opportunities instantly via WhatsApp.</p>
+
+                <h2>Registration and access</h2>
+                <p><strong>Minimum age.</strong> You must be at least 13 years old or the minimum age required in your country to consent to use the Services. If you are under 18, you must have your parent or legal guardian’s permission to use the Services.</p>
+
+                <p><strong>Account Usage.</strong> Access to KUMUL AI is provided via your WhatsApp phone number. You are responsible for all activities that occur under your phone number. You agree not to share your access in a way that violates these Terms.</p>
+
+                <h2>Using our Services</h2>
+                <p><strong>What you can do.</strong> Subject to your compliance with these Terms, you may access and use our Services for personal, non-commercial job searching and career advice purposes.</p>
+
+                <p><strong>What you cannot do.</strong> You may not use our Services for any illegal, harmful, or abusive activity. For example, you may not:</p>
+                <ul>
+                    <li>Use our Services in a way that infringes, misappropriates, or violates anyone’s rights.</li>
+                    <li>Attempt to reverse engineer, decompile, or discover the source code or underlying components of our Services, including our models, algorithms, or systems.</li>
+                    <li>Automatically or programmatically extract data or Output (scraping) for commercial datasets.</li>
+                    <li>Interfere with or disrupt our Services, including circumventing any rate limits or restrictions.</li>
+                    <li>Use the Services to distribute spam or unsolicited communications.</li>
+                </ul>
+
+                <h2>Content</h2>
+                <p><strong>Your content.</strong> You may provide input to the Services (“Input”), and receive output from the Services based on the Input (“Output”). Input and Output are collectively “Content.” You are responsible for Content, including ensuring that it does not violate any applicable law or these Terms.</p>
+
+                <p><strong>Ownership of content.</strong> As between you and Optimus Geotechnics Ltd, you (a) retain your ownership rights in Input and (b) own the Output. We hereby assign to you all our right, title, and interest, if any, in and to Output.</p>
+
+                <p><strong>Accuracy.</strong> Artificial intelligence and machine learning are rapidly evolving fields of study. Given the probabilistic nature of machine learning, use of our Services may, in some situations, result in Output that does not accurately reflect real people, places, or facts.</p>
+                
+                <p>When you use our Services you understand and agree:</p>
+                <ul>
+                    <li>Job listings and salary information may not always be accurate or up-to-date.</li>
+                    <li>You should not rely on Output from our Services as a sole source of truth or factual information.</li>
+                    <li>You must evaluate Output for accuracy and appropriateness for your use case.</li>
+                </ul>
+
+                <h2>Our IP rights</h2>
+                <p>We and our affiliates own all rights, title, and interest in and to the Services. You may only use our name and logo in accordance with our Brand Guidelines.</p>
+
+                <h2>Service Availability</h2>
+                <p>KUMUL AI is a free community initiative powered by open-source and free-tier AI models. We make no guarantees regarding uptime or availability. We reserve the right to modify or discontinue the Service at any time without notice.</p>
+
+                <h2>Termination and suspension</h2>
+                <p>You are free to stop using our Services at any time. We reserve the right to suspend or terminate your access to our Services if we determine that you have breached these Terms or if your use poses a risk to the Service or other users.</p>
+
+                <h2>Disclaimer of warranties</h2>
+                <p>OUR SERVICES ARE PROVIDED “AS IS.” EXCEPT TO THE EXTENT PROHIBITED BY LAW, WE AND OUR AFFILIATES AND LICENSORS MAKE NO WARRANTIES (EXPRESS, IMPLIED, STATUTORY OR OTHERWISE) WITH RESPECT TO THE SERVICES, AND DISCLAIM ALL WARRANTIES INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICES WILL BE UNINTERRUPTED, ACCURATE OR ERROR FREE.</p>
+
+                <h2>Limitation of liability</h2>
+                <p>NEITHER WE NOR ANY OF OUR AFFILIATES OR LICENSORS WILL BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES, INCLUDING DAMAGES FOR LOSS OF PROFITS, GOODWILL, USE, OR DATA OR OTHER LOSSES, EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+
+                <h2>Governing law</h2>
+                <p>The laws of Papua New Guinea will govern these Terms. All claims arising out of or relating to these Terms will be brought exclusively in the courts of Port Moresby, Papua New Guinea.</p>
+
+                <br>
+                <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+                <br>
+
                 <h1>Privacy Policy</h1>
-                <p>Your privacy is critical to us. This policy outlines how KUMUL AI handles user data.</p>
-            </article>
+                <p><em>Updated: March 30, 2026</em></p>
 
-            <article id="collection">
-                <h2>Information We Collect</h2>
-                <p>We collect information provided directly via WhatsApp, including:</p>
+                <p>At Optimus Geotechnics Ltd, we are committed to respecting your privacy. This Privacy Policy describes our practices with respect to personal data that we collect from or about you when you use KUMUL AI.</p>
+
+                <h2>1. Data we collect</h2>
+                <p>We collect personal data relating to you (“Personal Data”) as follows:</p>
                 <ul>
-                    <li>Phone Number</li>
-                    <li>Job Preferences (Profession, Skills)</li>
-                    <li>Location (Text or Coordinates)</li>
-                    <li>Message History</li>
+                    <li><strong>Account Information:</strong> We collect information associated with your account, such as your contact details, to identify you and provide our Services.</li>
+                    <li><strong>Content:</strong> We collect the information you provide when using our Services, including your requests to the assistant and the responses generated to help you.</li>
+                    <li><strong>Usage Data:</strong> We automatically collect certain information about how you interact with our Services, such as device identifiers and interaction logs, to maintain system reliability and security.</li>
+                    <li><strong>Location Data:</strong> We may use general location information to provide you with localized job results and relevant opportunities near you.</li>
                 </ul>
-            </article>
 
-            <article id="usage">
-                <h2>How We Use Information</h2>
-                <p>Data is used solely to:</p>
+                <h2>2. How we use Data</h2>
+                <p>We use Personal Data for the following purposes:</p>
                 <ul>
-                    <li>Match users with relevant job opportunities.</li>
-                    <li>Improve the AI's understanding of the PNG job market.</li>
-                    <li>Maintain conversation context.</li>
+                    <li>To provide, analyze, and maintain our Services (e.g., to process your job search requests).</li>
+                    <li>To improve and develop our Services, including training or improving our AI models.</li>
+                    <li>To communicate with you, including sending service-related updates.</li>
+                    <li>To prevent fraud, illegal activity, or misuses of our Services.</li>
                 </ul>
-                <p>We do <strong>not</strong> sell personal data to third parties.</p>
-            </article>
 
-            <article id="security">
-                <h2>Data Security</h2>
-                <p>All data is encrypted in transit and stored securely in a private database. Access to the database is strictly limited to the core development team.</p>
+                <h2>3. Disclosure of Personal Data</h2>
+                <p>We disclose your Personal Data in the following circumstances:</p>
+                <ul>
+                    <li><strong>Vendors and Service Providers:</strong> We use third-party providers for hosting, AI model processing (e.g., OpenAI, Groq, etc.), and messaging infrastructure (e.g., Meta/Facebook, Twilio). These providers process data on our behalf.</li>
+                    <li><strong>Legal Requirements:</strong> We may disclose data to comply with the law or respond to lawful requests.</li>
+                </ul>
+
+                <h2>4. Retention</h2>
+                <p>We’ll retain your Personal Data for only as long as we need in order to provide our Services to you or for other legitimate business purposes such as resolving disputes or complying with legal obligations. You can request deletion of your chat history at any time.</p>
+
+                <h2>5. Data controls</h2>
+                <p>You have certain controls over your Personal Data:</p>
+                <ul>
+                    <li>You can request to delete your account and associated data by contacting us.</li>
+                    <li>You can request a copy of the data we hold about you.</li>
+                </ul>
+
+                <h2>6. Your rights</h2>
+                <p>Depending on where you live, you may have certain statutory rights in relation to your Personal Data, including the right to access, rectify, or delete your Personal Data.</p>
+
+                <h2>7. Children</h2>
+                <p>Our Services are not directed to, or intended for, children under 13. We do not knowingly collect Personal Data from children under 13.</p>
+
+                <h2>8. Security</h2>
+                <p>We implement commercially reasonable technical and organizational measures designed to protect Personal Data from loss, misuse, and unauthorized access. However, no Internet transmission is ever fully secure.</p>
+
+                <h2>9. Contact Us</h2>
+                <p>Please contact support if you have any questions or concerns not already addressed in this policy.</p>
+                <div class="code-block">
+Contact: Optimus Geotechnics Ltd
+Email: support@datacomlab.com
+Location: Port Moresby, Papua New Guinea
+                </div>
+
             </article>
-        </main>
-        <footer>&copy; 2026 KUMUL AI Development Team. All Rights Reserved.</footer>
+        </div>
     </div>
+
+    <div class="footer">
+        &copy; 2026 KUMUL AI. RIGHTS RESERVED.
+    </div>
+
+    <!-- Background Script -->
+    <script>
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles = [];
+        const particleCount = 60; 
+
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        class Particle {
+            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5; this.size = Math.random() * 2; }
+            update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > width) this.vx *= -1; if (this.y < 0 || this.y > height) this.vy *= -1; }
+            draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = 'rgba(37, 211, 102, 0.4)'; ctx.fill(); }
+        }
+        function init() { resize(); particles = []; for (let i = 0; i < particleCount; i++) particles.push(new Particle()); }
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y; const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) { ctx.beginPath(); ctx.strokeStyle = `rgba(37, 211, 102, ${0.1 - dist/1500})`; ctx.lineWidth = 1; ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        window.addEventListener('resize', resize);
+        init(); animate();
+    </script>
 </body>
 </html>
